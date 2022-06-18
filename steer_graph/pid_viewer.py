@@ -3,8 +3,8 @@
 import rclpy
 import time
 from rclpy.node import Node
-from ichthus_can_msgs.msg import Pid
-from std_msgs.msg import Float64
+from ichthus_msgs.msg import Common
+from std_msgs.msg import Int32
 import matplotlib.pyplot as plt
 
 
@@ -13,9 +13,11 @@ class Steer_graph(Node):
   def __init__(self):
     super().__init__("steer_graph")
     self.ref_subs = self.create_subscription(
-      Float64, "ref_ang", self.ref_callback, 10)
+      Common, "ref_ang", self.ref_callback, 10)
     self.whl_ang_subs = self.create_subscription(
-      Float64, "cur_ang", self.str_callback, 10)
+      Common, "cur_ang", self.str_callback, 10)
+    self.pid_off = self.create_subscription(
+      Int32, "external_cmd", self.extern_callback, 10)
     self.start_time = time.time()
     self.str_ang_axis = []
     self.str_time_axis = []
@@ -41,12 +43,18 @@ class Steer_graph(Node):
     plt.plot(self.str_time_axis, self.ref_ang_axis, color="red", label="Ref")
     plt.plot(self.str_time_axis, self.str_ang_axis, color="black", label="Vel")
     plt.draw()
-    plt.pause(0.2)
+    plt.pause(0.001)
     self.fig.clear()
 
   def ref_callback(self, data):
     self.ref_ang = -data.data
 
+  def extern_callback(self, data):
+    if data.data == 3:
+      plt.plot(self.str_time_axis, self.ref_ang_axis, color="red", label="Ref")
+      plt.plot(self.str_time_axis, self.str_ang_axis, color="black", label="Vel")
+      plt.savefig(str(time.time()) + ".png");
+      print("save figure")
 
 def main(args=None):
   rclpy.init(args=args)
@@ -55,6 +63,7 @@ def main(args=None):
   rclpy.spin(steer_graph)
 
   steer_graph.destroy_node()
+  # plt.savefig(time.time());
   rclpy.shutdown()
 
 
